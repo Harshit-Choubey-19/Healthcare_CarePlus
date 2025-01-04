@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MdHealthAndSafety } from "react-icons/md";
+import { FaPlusCircle } from "react-icons/fa";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export const NavBar = () => {
@@ -28,7 +29,8 @@ export const NavBar = () => {
           />
         </Link>
       </div>
-      <span className="text-white text-2xl max-[669px]:hidden">
+      <span className="text-white text-2xl max-[669px]:hidden flex justify-center items-center gap-1">
+        <FaPlusCircle className="text-red-500" />
         Health Care Management System
       </span>
 
@@ -50,11 +52,15 @@ export const NavBar = () => {
             <DropdownMenuGroup>
               <DropdownMenuItem className="cursor-pointer">
                 <User />
-                <span>Profile</span>
+                <Link to="/profile">
+                  <span>Profile</span>
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem className="cursor-pointer">
                 <MdHealthAndSafety />
-                <span>My Appointments</span>
+                <Link to="/my-appointments">
+                  <span>My Appointments</span>
+                </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

@@ -26,7 +26,7 @@ export const SuccessPage = () => {
             <Link to="/">Go to Home</Link>
           </Button>
           <Button className="bg-green-600 text-white hover:bg-green-700">
-            <Link to="/appointments">My Appointments</Link>
+            <Link to="/my-appointments">My Appointments</Link>
           </Button>
         </div>
       </div>

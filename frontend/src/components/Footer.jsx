@@ -1,4 +1,3 @@
-import React from "react";
 import {
   FaFacebookF,
   FaTwitter,
@@ -8,7 +7,7 @@ import {
 
 export const Footer = () => {
   return (
-    <footer className="bg-gray-900 text-white py-8 w-full shadow-xl mt-14">
+    <footer className="bg-gray-900 text-white py-8 w-full shadow-xl mt-10">
       <div className="container mx-auto px-4">
         <div className="flex flex-wrap justify-between items-center">
           <div className="w-full md:w-1/3 mb-6 md:mb-0">
