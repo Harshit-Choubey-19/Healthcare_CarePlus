@@ -34,6 +34,9 @@ import LoadingSpinner from "@/common/LoadingSpinner";
 import { useNavigate } from "react-router-dom";
 
 export const RegistrationPage = () => {
+  useEffect(() => {
+    document.title = "CarePlus | Registration";
+  });
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { data: authUser, refetch } = useQuery({

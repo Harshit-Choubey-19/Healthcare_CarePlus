@@ -8,6 +8,7 @@ import { formatTime } from "@/lib/utils/formatTime";
 import toast from "react-hot-toast";
 import { useMutation, useQuery } from "react-query";
 import { useNavigate } from "react-router-dom";
+import LoadingSpinner from "@/common/LoadingSpinner";
 
 export const ReschuleAppointmentCard = ({ appointment }) => {
   const [selectedDate, setSelectedDate] = useState(null);
@@ -33,7 +34,7 @@ export const ReschuleAppointmentCard = ({ appointment }) => {
 
   const {
     mutate: rescheduleAppointment,
-    isPending,
+    isLoading,
     isError,
   } = useMutation({
     mutationFn: async ({ date, time }) => {
@@ -222,12 +223,16 @@ export const ReschuleAppointmentCard = ({ appointment }) => {
             ))}
           </select>
         </div>
-        <Button
-          className="w-full bg-blue-600 text-white hover:bg-blue-700 hover:scale-105 transform transition-all ease-linear duration-150"
-          onClick={handleBookAppointment}
-        >
-          Reschedule Appointment
-        </Button>
+        {isLoading ? (
+          <LoadingSpinner />
+        ) : (
+          <Button
+            className="w-full bg-blue-600 text-white hover:bg-blue-700 hover:scale-105 transform transition-all ease-linear duration-150"
+            onClick={handleBookAppointment}
+          >
+            Reschedule Appointment
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

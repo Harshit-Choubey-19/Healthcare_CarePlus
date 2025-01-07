@@ -10,9 +10,11 @@ import {
 import React, { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "react-query";
 import toast from "react-hot-toast";
-import { useNavigate } from "react-router-dom";
 
 export const OtpPage = () => {
+  useEffect(() => {
+    document.title = "CarePlus | Verify Otp";
+  });
   const queryClient = useQueryClient();
 
   const [otp, setOtp] = useState("");

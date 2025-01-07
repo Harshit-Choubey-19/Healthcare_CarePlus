@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Footer } from "@/components/Footer";
 import { NavBar } from "@/components/NavBar";
 import { ReschuleAppointmentCard } from "@/components/ReschuleAppointmentCard";
@@ -7,6 +7,9 @@ import LoadingSpinner from "@/common/LoadingSpinner";
 import { useParams } from "react-router-dom";
 
 export const RescheduleAppointment = () => {
+  useEffect(() => {
+    document.title = "CarePlus | Reshedule your Appointment";
+  });
   const { hospitalId } = useParams();
   const { data: oneAppointment, isLoading } = useQuery({
     queryKey: ["oneAppointment"],

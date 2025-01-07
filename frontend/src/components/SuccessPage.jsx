@@ -7,6 +7,9 @@ import { formatDate } from "@/lib/utils/formatDate";
 import { formatTime } from "@/lib/utils/formatTime";
 
 export const SuccessPage = () => {
+  useEffect(() => {
+    document.title = "CarePlus | Appointment Booked";
+  });
   const location = useLocation();
   const { hospitalId } = location.state || {};
   const {

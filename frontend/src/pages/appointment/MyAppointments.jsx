@@ -42,6 +42,9 @@ import { formatTime } from "@/lib/utils/formatTime";
 import toast from "react-hot-toast";
 
 export const MyAppointments = () => {
+  useEffect(() => {
+    document.title = "CarePlus | My Appointments";
+  });
   const queryClient = useQueryClient();
 
   const {
@@ -65,12 +68,7 @@ export const MyAppointments = () => {
     },
   });
 
-  const {
-    mutate: deleleAppointment,
-    isPending,
-    isError,
-    error,
-  } = useMutation({
+  const { mutate: deleleAppointment, isLoading: isDeleting } = useMutation({
     mutationFn: async (appointmentId) => {
       try {
         const res = await fetch(
@@ -183,7 +181,7 @@ export const MyAppointments = () => {
                                         handleDelete(appointment._id)
                                       }
                                     >
-                                      {isPending ? "Loading.." : "Continue"}
+                                      {isDeleting ? "Loading.." : "Continue"}
                                     </AlertDialogAction>
                                   </AlertDialogFooter>
                                 </AlertDialogContent>

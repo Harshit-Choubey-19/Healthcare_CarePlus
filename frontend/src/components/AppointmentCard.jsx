@@ -54,7 +54,7 @@ export const AppointmentCard = () => {
 
   const {
     mutate: bookAppointment,
-    isPending,
+    isLoading,
     isError,
   } = useMutation({
     mutationFn: async ({ date, time }) => {
@@ -269,7 +269,7 @@ export const AppointmentCard = () => {
             ))}
           </select>
         </div>
-        {isPending ? (
+        {isLoading ? (
           <LoadingSpinner />
         ) : (
           <Button

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MdOutlineMail } from "react-icons/md";
 import { FaUser } from "react-icons/fa";
 import { Button } from "../../components/ui/button";
@@ -13,6 +13,9 @@ import { toast } from "react-hot-toast";
 import LoadingSpinner from "./../../common/LoadingSpinner";
 
 export const SignupPage = () => {
+  useEffect(() => {
+    document.title = "CarePlus | Signup";
+  });
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
@@ -23,7 +26,7 @@ export const SignupPage = () => {
   const [DefError, setDefError] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
 
-  const { mutate, isError, isPending, error } = useMutation({
+  const { mutate, isLoading } = useMutation({
     mutationFn: async ({ fullName, email, phoneNumber }) => {
       try {
         const res = await fetch("/api/auth/signup", {
@@ -130,12 +133,13 @@ export const SignupPage = () => {
                 required
               />
             </label>
-            {isPending ? (
+            {isLoading ? (
               <LoadingSpinner />
             ) : (
               <Button
                 type="submit"
                 className="shad-primary-btn w-full text-white bg-green-500 hover:bg-green-700"
+                disabled={isLoading}
               >
                 Signup
               </Button>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { GiHealthNormal } from "react-icons/gi";
 import { Button } from "../../components/ui/button";
 import "react-phone-number-input/style.css";
@@ -10,18 +10,16 @@ import toast from "react-hot-toast";
 import LoadingSpinner from "./../../common/LoadingSpinner";
 
 export const LoginPage = () => {
+  useEffect(() => {
+    document.title = "CarePlus | Login";
+  });
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
     patientId: "",
   });
 
-  const {
-    mutate: loginMutation,
-    isPending,
-    isError,
-    error,
-  } = useMutation({
+  const { mutate: loginMutation, isLoading } = useMutation({
     mutationFn: async ({ patientId }) => {
       try {
         const res = await fetch("/api/auth/login", {
@@ -102,13 +100,13 @@ export const LoginPage = () => {
                 required
               />
             </label>
-            {isPending ? (
+            {isLoading ? (
               <LoadingSpinner />
             ) : (
               <Button
                 type="submit"
                 className="shad-primary-btn w-full text-white bg-green-500 hover:bg-green-700"
-                disabled={isPending}
+                disabled={isLoading}
               >
                 Get started
               </Button>
