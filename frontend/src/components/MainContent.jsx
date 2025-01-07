@@ -8,6 +8,8 @@ import {
 } from "@react-google-maps/api";
 import { FaHandPointRight } from "react-icons/fa";
 import { HospitalCard } from "./HospitalCard";
+import { useQuery } from "react-query";
+import toast from "react-hot-toast";
 
 // Static Configuration
 const MAP_LIBRARIES = ["places", "marker"];
@@ -19,7 +21,6 @@ const MAP_CONTAINER_STYLE = {
 
 export const MainContent = () => {
   const [location, setLocation] = useState(null);
-  const [hospitals, setHospitals] = useState([]);
   const [selectedHospital, setSelectedHospital] = useState(null);
 
   // Load Google Maps API
@@ -27,6 +28,64 @@ export const MainContent = () => {
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
     libraries: MAP_LIBRARIES,
   });
+
+  // Check local storage for location on component mount
+  useEffect(() => {
+    const storedLocation = localStorage.getItem("userLocation");
+    if (storedLocation) {
+      setLocation(JSON.parse(storedLocation));
+    }
+  }, []);
+
+  const {
+    data: hospitals,
+    isLoading,
+    refetch,
+  } = useQuery({
+    queryKey: ["hospitals"],
+    enabled: !!location, // Only fetch when location is set
+    queryFn: async () => {
+      try {
+        const res = await fetch(
+          `/api/hospitals/nearby?lat=${location.lat}&lng=${location.lng}`
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || "Something went wrong");
+        }
+        return data;
+      } catch (error) {
+        throw new Error(error);
+      }
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const { data: authUser } = useQuery({
+    queryKey: ["authUser"],
+    queryFn: async () => {
+      try {
+        const res = await fetch("/api/profile");
+        const data = await res.json();
+
+        if (data.error) return null;
+
+        if (!res.ok) {
+          throw new Error(data.error || "Something went wrong!");
+        }
+        return data;
+      } catch (error) {
+        throw new Error(error);
+      }
+    },
+  });
+
+  useEffect(() => {
+    if (location) refetch(); // Refetch data only when location is set
+  }, [location, refetch]);
 
   const handleLocate = () => {
     if (navigator.geolocation) {
@@ -36,33 +95,8 @@ export const MainContent = () => {
           const currentLocation = { lat: latitude, lng: longitude };
 
           setLocation(currentLocation);
-          setHospitals([
-            {
-              id: 1,
-              name: "Hospital A",
-              lat: latitude + 0.01,
-              lng: longitude + 0.01,
-            },
-            {
-              id: 2,
-              name: "Hospital B",
-              lat: latitude - 0.01,
-              lng: longitude - 0.01,
-            },
-            {
-              id: 3,
-              name: "Hospital C",
-              lat: latitude + 0.02,
-              lng: longitude - 0.02,
-            },
-            {
-              id: 4,
-              name: "Hospital D",
-              lat: latitude - 0.02,
-              lng: longitude + 0.02,
-            },
-          ]);
-          console.log("User Location:", currentLocation);
+          localStorage.setItem("userLocation", JSON.stringify(currentLocation)); // Store location in local storage
+          localStorage.setItem("patientId", JSON.stringify(authUser._id));
         },
         (error) => {
           console.error("Error obtaining geolocation:", error.message);
@@ -82,6 +116,14 @@ export const MainContent = () => {
 
   if (!isLoaded) {
     return <div>Loading maps...</div>;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="text-4xl text-white font-semibold ml-5 mt-5">
+        Loading...
+      </div>
+    );
   }
 
   return (
@@ -113,9 +155,9 @@ export const MainContent = () => {
             {/* User Location Marker */}
             <MarkerF
               position={location}
-              title="Your Location"
+              title="My Location"
               label={{
-                text: "📍 Your Location",
+                text: "📍 My Location",
                 color: "black",
                 fontSize: "14px",
                 fontWeight: "bold",
@@ -123,20 +165,24 @@ export const MainContent = () => {
             />
 
             {/* Hospital Markers */}
-            {hospitals.map((hospital) => (
-              <MarkerF
-                key={hospital.id}
-                position={{ lat: hospital.lat, lng: hospital.lng }}
-                title={hospital.name}
-                label={{
-                  text: `🏥 ${hospital.name}`,
-                  color: "black",
-                  fontSize: "12px",
-                  fontWeight: "bold",
-                }}
-                onClick={() => setSelectedHospital(hospital)}
-              />
-            ))}
+            {hospitals &&
+              hospitals.map((hospital) => (
+                <MarkerF
+                  key={hospital.id}
+                  position={{
+                    lat: hospital.location.lat,
+                    lng: hospital.location.lng,
+                  }}
+                  title={hospital.name}
+                  label={{
+                    text: `🏥 ${hospital.name}`,
+                    color: "black",
+                    fontSize: "12px",
+                    fontWeight: "bold",
+                  }}
+                  onClick={() => setSelectedHospital(hospital)}
+                />
+              ))}
 
             {/* InfoWindow for Selected Hospital */}
             {selectedHospital && (
@@ -148,7 +194,7 @@ export const MainContent = () => {
                 onCloseClick={() => setSelectedHospital(null)}
               >
                 <div>
-                  <strong>{selectedHospital.name}</strong>
+                  <strong>{selectedHospital?.name}</strong>
                 </div>
               </InfoWindow>
             )}

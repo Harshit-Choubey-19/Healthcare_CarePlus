@@ -1,378 +1,272 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { NavBar } from "@/components/NavBar";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import "tailwindcss/tailwind.css";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/Select";
+import DatePicker from "react-datepicker";
+import { useMutation, useQuery } from "react-query";
+import { formatDate } from "@/lib/utils/formatDate";
+import toast from "react-hot-toast";
+import LoadingSpinner from "@/common/LoadingSpinner";
+import { Separator } from "@/components/ui/separator";
 
 export const Profile = () => {
   const [patient, setPatient] = useState({
-    id: "12345",
-    name: "John Doe",
-    email: "john.doe@example.com",
-    phone: "123-456-7890",
-    address: "123 Main St, Anytown, USA",
-    age: 30,
-    dob: "1991-01-01",
-    gender: "Male",
-    occupation: "Software Engineer",
-    allergies: "None",
-    medicalHistory: "No significant history",
-    emergencyContactName: "Jane Doe",
-    emergencyContactNumber: "098-765-4321",
-    identificationType: "aadhar",
-    identificationNumber: "D1234567",
+    address: "",
+    gender: "",
+    occupation: "",
+    allergies: "",
+    medicalHistory: "",
+    emergencyContactName: "",
+    emergencyContactNumber: "",
     prescription: {
-      doctorName: "Dr. Smith",
-      medicines: ["Medicine 1", "Medicine 2"],
+      doctorName: "",
+      prescriptionDate: new Date(),
+      comment: "",
+      medicines: [],
     },
   });
 
   const [toUpdate, setToUpdate] = useState({});
 
+  const {
+    data: patientData,
+    isLoading,
+    error,
+    isError,
+    refetch,
+  } = useQuery("patientData", async () => {
+    const res = await fetch("/api/profile");
+    if (!res.ok) throw new Error("Failed to fetch patient data");
+    return res.json();
+  });
+
+  const { mutate: updateProfile, isLoading: isUpdating } = useMutation(
+    async () => {
+      const res = await fetch(`/api/profile/update`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(toUpdate),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Something went wrong!");
+      return data;
+    },
+    {
+      onSuccess: (data) => toast.success(data.message),
+      onError: (error) => toast.error(error.message),
+    }
+  );
+
   const handleChange = (field, value) => {
-    setPatient((prevPatient) => ({
-      ...prevPatient,
-      [field]: value,
+    setPatient((prev) => ({ ...prev, [field]: value }));
+    setToUpdate((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleNestedChange = (field, subField, value) => {
+    setPatient((prev) => ({
+      ...prev,
+      [field]: { ...prev[field], [subField]: value },
     }));
-    setToUpdate((prevToUpdate) => ({
-      ...prevToUpdate,
-      [field]: value,
+
+    setToUpdate((prev) => ({
+      ...prev,
+      [field]: {
+        ...(prev[field] || {}), // Ensure the nested object exists
+        [subField]: value,
+      },
     }));
   };
 
-  const handleMedicineChange = (index, value) => {
-    const newMedicines = [...patient.prescription.medicines];
-    newMedicines[index] = value;
-    setPatient((prevPatient) => ({
-      ...prevPatient,
+  const handleMedicineChange = (index, field, value) => {
+    const updatedMedicines = [...patient.prescription.medicines];
+    updatedMedicines[index] = { ...updatedMedicines[index], [field]: value };
+
+    setPatient((prev) => ({
+      ...prev,
       prescription: {
-        ...prevPatient.prescription,
-        medicines: newMedicines,
+        ...prev.prescription,
+        medicines: updatedMedicines,
       },
     }));
-    setToUpdate((prevToUpdate) => ({
-      ...prevToUpdate,
+
+    setToUpdate((prev) => ({
+      ...prev,
       prescription: {
-        ...prevToUpdate.prescription,
-        medicines: newMedicines,
+        ...(prev.prescription || {}), // Ensure the nested object exists
+        medicines: updatedMedicines,
       },
     }));
   };
 
   const addMedicine = () => {
-    const newMedicines = [...patient.prescription.medicines, ""];
-    setPatient((prevPatient) => ({
-      ...prevPatient,
-      prescription: {
-        ...prevPatient.prescription,
-        medicines: newMedicines,
-      },
-    }));
-    setToUpdate((prevToUpdate) => ({
-      ...prevToUpdate,
-      prescription: {
-        ...prevToUpdate.prescription,
-        medicines: newMedicines,
-      },
-    }));
+    const newMedicines = [
+      ...patient.prescription.medicines,
+      { name: "", dosage: "" },
+    ];
+    handleNestedChange("prescription", "medicines", newMedicines);
   };
 
   const removeMedicine = (index) => {
     const newMedicines = patient.prescription.medicines.filter(
       (_, i) => i !== index
     );
-    setPatient((prevPatient) => ({
-      ...prevPatient,
-      prescription: {
-        ...prevPatient.prescription,
-        medicines: newMedicines,
-      },
-    }));
-    setToUpdate((prevToUpdate) => ({
-      ...prevToUpdate,
-      prescription: {
-        ...prevToUpdate.prescription,
-        medicines: newMedicines,
-      },
-    }));
+    handleNestedChange("prescription", "medicines", newMedicines);
   };
 
   const handleSave = () => {
-    console.log("Updated changes to be saved", toUpdate);
+    if (Object.keys(toUpdate).length > 0) {
+      updateProfile();
+    } else {
+      toast.info("No changes to save.");
+    }
   };
+
+  useEffect(() => {
+    if (patientData) {
+      setPatient(patientData);
+    }
+  }, [patientData]);
+
+  if (isLoading) return <div>Loading...</div>;
+  if (isError) return <div>Error: {error.message}</div>;
 
   return (
     <div className="min-h-screen bg-black">
       <NavBar />
       <div className="container mx-auto p-4">
-        <h1 className="text-3xl font-bold mb-4 text-white">Patient Profile</h1>
+        <div className="flex justify-center items-center">
+          <h1 className="text-3xl font-bold mb-4 text-white">
+            Patient Profile
+          </h1>
+        </div>
         <div className="bg-white p-6 rounded-lg shadow-lg text-black">
+          <InputField label="Patient ID" value={patientData?._id} disabled />
+          <InputField label="Name" value={patientData?.fullName} disabled />
+          <InputField label="Email" value={patientData?.email} disabled />
+          <InputField label="Phone" value={patientData?.phoneNumber} disabled />
+          <InputField
+            label="Address"
+            value={patient.address}
+            onChange={(e) => handleChange("address", e.target.value)}
+          />
+          <InputField label="Age" value={patientData?.age} disabled />
+          <InputField
+            label="DOB"
+            value={formatDate(patientData?.dob)}
+            disabled
+          />
+          <InputField label="Gender" value={patientData?.gender} disabled />
+          <InputField
+            label="Occupation"
+            value={patient.occupation}
+            onChange={(e) => handleChange("occupation", e.target.value)}
+          />
+          <InputField
+            label="Allergies"
+            value={patient.allergies}
+            onChange={(e) => handleChange("allergies", e.target.value)}
+          />
+          <InputField
+            label="Medical History"
+            value={patient.medicalHistory}
+            onChange={(e) => handleChange("medicalHistory", e.target.value)}
+          />
+          <InputField
+            label="Emergency Contact Name"
+            value={patient.emergencyContactName}
+            onChange={(e) =>
+              handleChange("emergencyContactName", e.target.value)
+            }
+          />
+          <InputField
+            label="Emergency Contact Number"
+            value={patient.emergencyContactNumber}
+            onChange={(e) =>
+              handleChange("emergencyContactNumber", e.target.value)
+            }
+          />
+          <Separator className="mt-8" />
+          <Label className="block text-gray-700 font-bold mb-2 text-xl mt-3">
+            Prescription
+          </Label>
           <div className="mb-4">
-            <Label className="block text-gray-700 font-bold mb-2">
-              Patient ID
-            </Label>
-            <Input
-              type="text"
-              name="id"
-              value={patient.id}
-              onChange={handleChange}
-              disabled
-              className="w-full p-2 border border-gray-300 rounded"
-            />
-          </div>
-          <div className="mb-4">
-            <Label className="block text-gray-700 font-bold mb-2">Name</Label>
-            <Input
-              type="text"
-              name="name"
-              value={patient.name}
-              onChange={handleChange}
-              disabled
-              className="w-full p-2 border border-gray-300 rounded"
-            />
-          </div>
-          <div className="mb-4">
-            <Label className="block text-gray-700 font-bold mb-2">Email</Label>
-            <Input
-              type="text"
-              name="email"
-              value={patient.email}
-              onChange={handleChange}
-              disabled
-              className="w-full p-2 border border-gray-300 rounded"
-            />
-          </div>
-          <div className="mb-4">
-            <Label className="block text-gray-700 font-bold mb-2">Phone</Label>
-            <Input
-              type="text"
-              name="phone"
-              value={patient.phone}
-              onChange={handleChange}
-              disabled
-              className="w-full p-2 border border-gray-300 rounded"
-            />
-          </div>
-          <div className="mb-4">
-            <Label className="block text-gray-700 font-bold mb-2">
-              Address
-            </Label>
-            <Input
-              type="text"
-              name="address"
-              value={patient.address}
-              onChange={(e) => handleChange("address", e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded"
-            />
-          </div>
-          <div className="mb-4">
-            <Label className="block text-gray-700 font-bold mb-2">Age</Label>
-            <Input
-              type="text"
-              name="age"
-              value={patient.age}
-              onChange={handleChange}
-              disabled
-              className="w-full p-2 border border-gray-300 rounded"
-            />
-          </div>
-          <div className="mb-4">
-            <Label className="block text-gray-700 font-bold mb-2">DOB</Label>
-            <Input
-              type="text"
-              name="dob"
-              value={patient.dob}
-              onChange={handleChange}
-              disabled
-              className="w-full p-2 border border-gray-300 rounded"
-            />
-          </div>
-          <div className="mb-4">
-            <Label className="block text-gray-700 font-bold mb-2">Gender</Label>
-            <Input
-              type="text"
-              name="gender"
-              value={patient.gender}
-              onChange={handleChange}
-              className="w-full p-2 border border-gray-300 rounded"
-            />
-          </div>
-          <div className="mb-4">
-            <Label className="block text-gray-700 font-bold mb-2">
-              Occupation
-            </Label>
-            <Input
-              type="text"
-              name="occupation"
-              value={patient.occupation}
-              onChange={(e) => handleChange("occupation", e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded"
-            />
-          </div>
-          <div className="mb-4">
-            <Label className="block text-gray-700 font-bold mb-2">
-              Allergies
-            </Label>
-            <Input
-              type="text"
-              name="allergies"
-              value={patient.allergies}
-              onChange={(e) => handleChange("allergies", e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded"
-            />
-          </div>
-          <div className="mb-4">
-            <Label className="block text-gray-700 font-bold mb-2">
-              Medical History
-            </Label>
-            <Input
-              type="text"
-              name="medicalHistory"
-              value={patient.medicalHistory}
-              onChange={(e) => handleChange("medicalHistory", e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded"
-            />
-          </div>
-          <div className="mb-4">
-            <Label className="block text-gray-700 font-bold mb-2">
-              Emergency Contact Name
-            </Label>
-            <Input
-              type="text"
-              name="emergencyContactName"
-              value={patient.emergencyContactName}
-              onChange={(e) =>
-                handleChange("emergencyContactName", e.target.value)
-              }
-              className="w-full p-2 border border-gray-300 rounded"
-            />
-          </div>
-          <div className="mb-4">
-            <Label className="block text-gray-700 font-bold mb-2">
-              Emergency Contact Number
-            </Label>
-            <Input
-              type="text"
-              name="emergencyContactNumber"
-              value={patient.emergencyContactNumber}
-              onChange={(e) =>
-                handleChange("emergencyContactNumber", e.target.value)
-              }
-              className="w-full p-2 border border-gray-300 rounded"
-            />
-          </div>
-          <div className="mb-4">
-            <Label className="block text-gray-700 font-bold mb-2">
-              Identification Type
-            </Label>
-            <Select
-              name="identificationType"
-              value={patient.identificationType}
-              onValueChange={(value) =>
-                handleChange("identificationType", value)
-              }
-              className="w-full text-black"
+            <Label
+              htmlFor="prescription-date"
+              className="block text-gray-700 font-bold mb-2 mt-4"
             >
-              <SelectTrigger className="w-[180px] text-black">
-                <SelectValue
-                  placeholder="Select Identification Type"
-                  className="text-black"
-                />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectLabel className="text-black">
-                    Identification
-                  </SelectLabel>
-                  <SelectItem value="passport">Passport</SelectItem>
-                  <SelectItem value="driving license">
-                    Driving License
-                  </SelectItem>
-                  <SelectItem value="aadhar">Aadhar</SelectItem>
-                  <SelectItem value="other government id">
-                    Other Government ID
-                  </SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="mb-4">
-            <Label className="block text-gray-700 font-bold mb-2">
-              Identification Number
+              Prescription Date
             </Label>
-            <Input
-              type="text"
-              name="identificationNumber"
-              value={patient.identificationNumber}
-              onChange={(e) =>
-                handleChange("identificationNumber", e.target.value)
+            <DatePicker
+              selected={new Date(patient?.prescription?.prescriptionDate)}
+              onChange={(date) =>
+                handleNestedChange("prescription", "prescriptionDate", date)
               }
-              className="w-full p-2 border border-gray-300 rounded"
+              dateFormat="MMMM d, yyyy"
+              className="w-full px-3 py-2 border rounded"
             />
           </div>
-          <div className="mb-4">
-            <Label className="block text-gray-700 font-bold mb-2">
-              Prescription
-            </Label>
-            <div className="mb-4">
-              <Label className="block text-gray-700 font-bold mb-2">
-                Doctor Name
-              </Label>
+          <InputField
+            label="Comment"
+            value={patient?.prescription?.comment}
+            onChange={(e) =>
+              handleNestedChange("prescription", "comment", e.target.value)
+            }
+          />
+          <InputField
+            label="Doctor Name"
+            value={patient?.prescription?.doctorName}
+            onChange={(e) =>
+              handleNestedChange("prescription", "doctorName", e.target.value)
+            }
+          />
+          {patient?.prescription?.medicines.map((medicine, index) => (
+            <div key={index} className="mb-4 flex items-center">
               <Input
                 type="text"
-                name="doctorName"
-                value={patient.prescription.doctorName}
+                placeholder="Medicine Name"
+                value={medicine?.name}
                 onChange={(e) =>
-                  handleChange("prescription", {
-                    ...patient.prescription,
-                    doctorName: e.target.value,
-                  })
+                  handleMedicineChange(index, "name", e.target.value)
                 }
-                className="w-full p-2 border border-gray-300 rounded"
+                className="w-1/2 p-2 border border-gray-300 rounded"
               />
+              <Input
+                type="text"
+                placeholder="Dosage"
+                value={medicine?.dosage}
+                onChange={(e) =>
+                  handleMedicineChange(index, "dosage", e.target.value)
+                }
+                className="w-1/4 p-2 border border-gray-300 rounded ml-2"
+              />
+              <Button
+                onClick={() => removeMedicine(index)}
+                className="ml-2 bg-red-500 text-white hover:bg-red-600"
+              >
+                Remove
+              </Button>
             </div>
-            {patient.prescription.medicines.map((medicine, index) => (
-              <div key={index} className="mb-4 flex items-center">
-                <Input
-                  type="text"
-                  name={`medicine-${index}`}
-                  value={medicine}
-                  onChange={(e) => handleMedicineChange(index, e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded"
-                />
-                <Button
-                  onClick={() => removeMedicine(index)}
-                  className="ml-2 bg-red-500 text-white"
-                >
-                  Remove
-                </Button>
-              </div>
-            ))}
-            <Button
-              onClick={addMedicine}
-              className="w-1/4 bg-green-500 text-white max-[464px]:text-xs"
-            >
-              Add Medicine
-            </Button>
-          </div>
+          ))}
+          <Button
+            onClick={addMedicine}
+            className="w-1/4 bg-green-500 text-white hover:bg-green-700"
+          >
+            Add Medicine
+          </Button>
           <div className="mt-6">
-            <Button
-              className="w-full bg-blue-500 text-white"
-              onClick={handleSave}
-            >
-              Save Changes
-            </Button>
+            {isUpdating ? (
+              <LoadingSpinner />
+            ) : (
+              <Button
+                onClick={handleSave}
+                className="w-full bg-blue-500 text-white hover:bg-blue-700"
+              >
+                Save Changes
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -380,3 +274,16 @@ export const Profile = () => {
     </div>
   );
 };
+
+const InputField = ({ label, value, onChange, disabled }) => (
+  <div className="mb-4">
+    <Label className="block text-gray-700 font-bold mb-2">{label}</Label>
+    <Input
+      type="text"
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+      className="w-full p-2 border border-gray-300 rounded"
+    />
+  </div>
+);

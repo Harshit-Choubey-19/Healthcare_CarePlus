@@ -1,16 +1,41 @@
 import React from "react";
-import { AppointmentCard } from "@/components/AppointmentCard";
 import { Footer } from "@/components/Footer";
 import { NavBar } from "@/components/NavBar";
 import { ReschuleAppointmentCard } from "@/components/ReschuleAppointmentCard";
+import { useQuery } from "react-query";
+import LoadingSpinner from "@/common/LoadingSpinner";
+import { useParams } from "react-router-dom";
 
 export const RescheduleAppointment = () => {
+  const { hospitalId } = useParams();
+  const { data: oneAppointment, isLoading } = useQuery({
+    queryKey: ["oneAppointment"],
+    queryFn: async () => {
+      try {
+        const res = await fetch(
+          `/api/hospitals/appointmentDetail/${hospitalId}`
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || "Something went wrong");
+        }
+        return data;
+      } catch (error) {
+        throw new Error(error);
+      }
+    },
+  });
   return (
     <div>
       {" "}
       <NavBar />
       <div className="m-8 flex justify-center items-center">
-        <ReschuleAppointmentCard />
+        {isLoading ? (
+          <LoadingSpinner />
+        ) : (
+          <ReschuleAppointmentCard appointment={oneAppointment} />
+        )}
       </div>
       <Footer />
     </div>

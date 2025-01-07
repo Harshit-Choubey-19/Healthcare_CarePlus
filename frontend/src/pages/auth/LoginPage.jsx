@@ -1,20 +1,68 @@
 import { useState } from "react";
 import { GiHealthNormal } from "react-icons/gi";
-import LoadingSpinner from "@/common/LoadingSpinner";
 import { Button } from "../../components/ui/button";
 import "react-phone-number-input/style.css";
 import React from "react";
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
+import { useMutation, useQueryClient } from "react-query";
+import toast from "react-hot-toast";
+import LoadingSpinner from "./../../common/LoadingSpinner";
 
 export const LoginPage = () => {
+  const queryClient = useQueryClient();
+
   const [formData, setFormData] = useState({
     patientId: "",
   });
 
+  const {
+    mutate: loginMutation,
+    isPending,
+    isError,
+    error,
+  } = useMutation({
+    mutationFn: async ({ patientId }) => {
+      try {
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ patientId }),
+        });
+        const data = await res.json();
+
+        if (!res.ok && !data.message) {
+          throw new Error(data.error || "Something went wrong!");
+        }
+        return data;
+      } catch (error) {
+        throw error;
+      }
+    },
+    onSuccess: (data) => {
+      console.log(data);
+      if (
+        data.message === "An Otp sent to your phone please verify!" ||
+        data.message ===
+          "Otp already sent to your registered phone number, please verify!"
+      ) {
+        toast.success(data.message);
+        queryClient.invalidateQueries({ queryKey: ["authUser"] });
+      } else {
+        toast.success(data.message);
+        queryClient.invalidateQueries({ queryKey: ["authUser"] });
+      }
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    // loginMutation(formData);
+    loginMutation(formData);
     console.log(formData);
   };
 
@@ -54,20 +102,24 @@ export const LoginPage = () => {
                 required
               />
             </label>
-            <Button
-              type="submit"
-              className="shad-primary-btn w-full text-white bg-green-500 hover:bg-green-700"
-            >
-              Get started
-            </Button>
-            {/* {isError && <p className="text-red-500">{error.message}</p>} */}
+            {isPending ? (
+              <LoadingSpinner />
+            ) : (
+              <Button
+                type="submit"
+                className="shad-primary-btn w-full text-white bg-green-500 hover:bg-green-700"
+                disabled={isPending}
+              >
+                Get started
+              </Button>
+            )}
           </form>
           <div className="text-14-regular mt-11 flex justify-between">
             <p className="justify-items-end text-dark-600 xl:text-left">
               © 2025 CarePlus
             </p>
             <Link to="/signup">
-              <p className="text-green-500">Sign up</p>
+              <p className="text-green-500 hover:underline">Sign up</p>
             </Link>
           </div>
         </div>

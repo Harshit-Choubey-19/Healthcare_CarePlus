@@ -1,6 +1,5 @@
 import { LogOut, User } from "lucide-react";
 import { Link } from "react-router-dom";
-
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,8 +13,71 @@ import {
 import { MdHealthAndSafety } from "react-icons/md";
 import { FaPlusCircle } from "react-icons/fa";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useMutation, useQuery, useQueryClient } from "react-query";
+import toast from "react-hot-toast";
 
 export const NavBar = () => {
+  const queryClient = useQueryClient();
+
+  const {
+    data: authUser,
+    isLoading,
+    error,
+    isError,
+  } = useQuery({
+    queryKey: ["authUser"],
+    queryFn: async () => {
+      try {
+        const res = await fetch("/api/profile");
+        const data = await res.json();
+
+        if (data.error) return null;
+
+        if (!res.ok) {
+          throw new Error(data.error || "Something went wrong!");
+        }
+        return data;
+      } catch (error) {
+        throw new Error(error);
+      }
+    },
+    retry: false,
+  });
+
+  const { mutate: logoutMutation } = useMutation({
+    mutationFn: async () => {
+      try {
+        const res = await fetch("/api/auth/logout", {
+          method: "POST",
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || "Something went wrong!");
+        }
+      } catch (error) {
+        console.log(error);
+        throw new Error(error.message);
+      }
+    },
+    onSuccess: () => {
+      // Redirect to login page
+      toast.success("Loged out successfully!");
+      queryClient.invalidateQueries({ queryKey: ["authUser"] });
+    },
+    onError: () => {
+      toast.error("Failed to log out!");
+    },
+  });
+
+  const handleClick = () => {
+    localStorage.removeItem("userLocation");
+    localStorage.removeItem("hospital");
+    localStorage.removeItem("patientId");
+    logoutMutation();
+  };
+
   return (
     <nav className="bg-blue-600 p-4 flex justify-between items-center sticky top-0 z-50">
       <div className="flex items-center">
@@ -43,7 +105,14 @@ export const NavBar = () => {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Avatar className="cursor-pointer text-black">
-              <AvatarFallback>CN</AvatarFallback>
+              <AvatarFallback>
+                {authUser?.fullName
+                  ? authUser.fullName
+                      .split(" ")
+                      .map((name) => name[0])
+                      .join("")
+                  : "User"}
+              </AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56">
@@ -66,7 +135,12 @@ export const NavBar = () => {
             <DropdownMenuSeparator />
             <DropdownMenuItem className="cursor-pointer">
               <LogOut />
-              <span>Log out</span>
+              <Button
+                className="bg-transparent hover:bg-transparent text-black p-0"
+                onClick={handleClick}
+              >
+                Log out
+              </Button>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

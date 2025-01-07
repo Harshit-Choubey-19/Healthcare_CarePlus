@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import "react-phone-number-input/style.css";
 import PhoneInput from "react-phone-number-input";
 import cn from "classnames";
@@ -28,13 +28,22 @@ import {
 } from "@/components/ui/sheet";
 import { FaTimes } from "react-icons/fa";
 import { Footer } from "@/components/Footer";
-// import { Prescription } from "@/components/Prescription";
+import { useMutation, useQuery, useQueryClient } from "react-query";
+import toast from "react-hot-toast";
+import LoadingSpinner from "@/common/LoadingSpinner";
+import { useNavigate } from "react-router-dom";
 
 export const RegistrationPage = () => {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { data: authUser, refetch } = useQuery({
+    queryKey: ["authUser"],
+  });
+
   const [formData, setFormData] = useState({
-    fullName: "John Doe",
-    email: "john.doe@example.com",
-    phoneNumber: "+919129100552",
+    fullName: authUser.fullName,
+    email: authUser.email,
+    phoneNumber: authUser.phoneNumber,
     gender: "",
     dob: "",
     address: "",
@@ -46,10 +55,12 @@ export const RegistrationPage = () => {
     identificationType: "",
     identificationNumber: "",
     privacyConsent: false,
-    prescriptions: "",
+    prescription: "",
   });
 
-  const [medicinesData, setMedicinesData] = useState([""]);
+  const [medicinesData, setMedicinesData] = useState([
+    { name: "", dosage: "" },
+  ]);
   const [prescriptionData, setPrescriptionData] = useState({
     prescriptionDate: "",
     doctorName: "",
@@ -57,18 +68,48 @@ export const RegistrationPage = () => {
     comment: "",
   });
 
+  const { mutate: registration, isLoading } = useMutation({
+    mutationFn: async () => {
+      try {
+        const res = await fetch(`/api/registration`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(formData),
+        });
+        const data = await res.json();
+
+        if (!res.ok && !data.message) {
+          throw new Error(data.error || "Something went wrong!");
+        }
+        return data;
+      } catch (error) {
+        throw error;
+      }
+    },
+    onSuccess: (data) => {
+      toast.success(data.message);
+      queryClient.invalidateQueries({ queryKey: ["authUser"] });
+      navigate("/");
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
   const handlePrescriptionInputChange = (field, value) => {
     setPrescriptionData({ ...prescriptionData, [field]: value });
   };
 
-  const handleMedicineChange = (index, value) => {
+  const handleMedicineChange = (index, field, value) => {
     const newMedicines = [...medicinesData];
-    newMedicines[index] = value;
+    newMedicines[index] = { ...newMedicines[index], [field]: value };
     setMedicinesData(newMedicines);
   };
 
   const addMedicineField = () => {
-    setMedicinesData([...medicinesData, ""]);
+    setMedicinesData([...medicinesData, { name: "", dosage: "" }]);
   };
 
   const removeMedicineField = (index) => {
@@ -86,6 +127,7 @@ export const RegistrationPage = () => {
       ...prescriptionData,
       medicines: medicinesData,
     });
+    toast.success("Prescription Data saved");
   };
 
   const handleInputChange = (field, value) => {
@@ -95,35 +137,42 @@ export const RegistrationPage = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  // Add this useEffect to sync prescriptionData with formData
+  useEffect(() => {
     setFormData((prevData) => ({
       ...prevData,
-      prescriptions: prescriptionData,
+      prescription: prescriptionData,
     }));
-    console.log("Form Data:", {
-      ...formData,
-      prescriptions: prescriptionData,
-    });
+  }, [prescriptionData]);
 
-    console.log("FORM DATA", formData);
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    console.log("Form Data:", formData);
+    registration();
   };
+
+  useEffect(() => {
+    if (authUser) {
+      refetch();
+    }
+  }, [authUser, refetch]);
 
   return (
     <>
-      <div className="container mx-auto px-4 py-8 text-white">
-        <div>
-          <img
-            src="/assets/icons/Logo.svg"
-            height={1000}
-            width={1000}
-            alt="patient"
-            className="mb-5 h-8 w-fit"
-          />
-          <h1 className="text-4xl font-bold mb-6 text-center">Registration</h1>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="">
+        <img
+          src="/assets/icons/Logo.svg"
+          height={1000}
+          width={1000}
+          alt="patient"
+          className="w-fit mt-4"
+        />
+        <h1 className="text-4xl mb-3 font-bold text-center text-white justify-center">
+          Registration
+        </h1>
+      </div>
+      <div className="text-black bg-white rounded-xl mr-4 ml-4 mt-2 shadow-2xl">
+        <form onSubmit={handleSubmit} className="space-y-6 p-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block mb-2 ">Full Name</label>
@@ -131,7 +180,7 @@ export const RegistrationPage = () => {
                 type="text"
                 value={formData.fullName}
                 disabled
-                className="w-full text-white bg-black"
+                className="w-full text-black bg-white"
               />
             </div>
             <div>
@@ -140,7 +189,7 @@ export const RegistrationPage = () => {
                 type="email"
                 value={formData.email}
                 disabled
-                className="w-full text-white bg-black"
+                className="w-full text-black bg-white"
               />
             </div>
             <div>
@@ -164,9 +213,9 @@ export const RegistrationPage = () => {
               <label className="block mb-2">Gender</label>
               <Select
                 onValueChange={(value) => handleInputChange("gender", value)}
-                className="w-full text-white bg-black"
+                className="w-full text-black bg-white"
               >
-                <SelectTrigger className="w-[180px] text-white bg-black">
+                <SelectTrigger className="w-[180px] text-black bg-white">
                   <SelectValue placeholder="Select Gender" />
                 </SelectTrigger>
                 <SelectContent>
@@ -185,7 +234,7 @@ export const RegistrationPage = () => {
                 type="date"
                 value={formData.dob}
                 onChange={(e) => handleInputChange("dob", e.target.value)}
-                className="w-full text-white bg-black"
+                className="w-full text-black bg-white"
               />
             </div>
             <div>
@@ -193,7 +242,7 @@ export const RegistrationPage = () => {
               <Textarea
                 value={formData.address}
                 onChange={(e) => handleInputChange("address", e.target.value)}
-                className="w-full text-white bg-black"
+                className="w-full text-black bg-white"
               />
             </div>
             <div>
@@ -204,7 +253,7 @@ export const RegistrationPage = () => {
                 onChange={(e) =>
                   handleInputChange("occupation", e.target.value)
                 }
-                className="w-full text-white bg-black"
+                className="w-full text-black bg-white"
               />
             </div>
             <div>
@@ -214,7 +263,7 @@ export const RegistrationPage = () => {
                 onChange={(e) =>
                   handleInputChange("medicalHistory", e.target.value)
                 }
-                className="w-full text-white bg-black"
+                className="w-full text-black bg-white"
               />
             </div>
             <div>
@@ -225,7 +274,7 @@ export const RegistrationPage = () => {
                 onChange={(e) =>
                   handleInputChange("emergencyContactName", e.target.value)
                 }
-                className="w-full text-white bg-black"
+                className="w-full text-black bg-white"
               />
             </div>
             <div>
@@ -248,7 +297,7 @@ export const RegistrationPage = () => {
               <Textarea
                 value={formData.allergies}
                 onChange={(e) => handleInputChange("allergies", e.target.value)}
-                className="w-full text-white bg-black"
+                className="w-full text-black bg-white"
               />
             </div>
             <div>
@@ -257,9 +306,9 @@ export const RegistrationPage = () => {
                 onValueChange={(value) =>
                   handleInputChange("identificationType", value)
                 }
-                className="w-full text-white bg-black"
+                className="w-full text-black bg-white"
               >
-                <SelectTrigger className="w-[180px] text-white bg-black">
+                <SelectTrigger className="w-[180px] text-black bg-white">
                   <SelectValue placeholder="Select Identification Type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -285,7 +334,7 @@ export const RegistrationPage = () => {
                 onChange={(e) =>
                   handleInputChange("identificationNumber", e.target.value)
                 }
-                className="w-full text-white bg-black"
+                className="w-full text-black bg-white"
               />
             </div>
             <div>
@@ -296,10 +345,10 @@ export const RegistrationPage = () => {
                     Edit Prescriptions
                   </Button>
                 </SheetTrigger>
-                <SheetContent className="bg-black text-white">
+                <SheetContent className="text-black bg-white">
                   <div className="max-h-screen overflow-y-auto p-4">
                     <SheetHeader>
-                      <SheetTitle className="text-white">
+                      <SheetTitle className="text-black">
                         Edit Prescription
                       </SheetTitle>
                       <SheetDescription>
@@ -308,7 +357,10 @@ export const RegistrationPage = () => {
                     </SheetHeader>
                     <form className="grid gap-4 py-4">
                       <div className="grid grid-cols-1 items-center gap-4">
-                        <Label htmlFor="prescriptionDate" className="">
+                        <Label
+                          htmlFor="prescriptionDate"
+                          className="text-black"
+                        >
                           Prescription Date
                         </Label>
                         <Input
@@ -321,11 +373,11 @@ export const RegistrationPage = () => {
                               e.target.value
                             )
                           }
-                          className="col-span-3 bg-black text-white"
+                          className="col-span-3 text-black bg-white"
                         />
                       </div>
                       <div className="grid grid-cols-1 items-center gap-4">
-                        <Label htmlFor="doctorName" className="">
+                        <Label htmlFor="doctorName" className="text-black">
                           Doctor Name
                         </Label>
                         <Input
@@ -338,7 +390,7 @@ export const RegistrationPage = () => {
                               e.target.value
                             )
                           }
-                          className="col-span-3 bg-black text-white"
+                          className="col-span-3 text-black bg-white"
                         />
                       </div>
                       {medicinesData.map((medicine, index) => (
@@ -346,19 +398,43 @@ export const RegistrationPage = () => {
                           key={index}
                           className="grid grid-cols-1 items-center gap-4"
                         >
-                          <Label htmlFor={`medicine-${index}`} className="">
+                          <Label
+                            htmlFor={`medicine-${index}`}
+                            className="text-black"
+                          >
                             Medicine {index + 1}
                           </Label>
                           <div className="col-span-3 flex items-center">
+                            {/* Medicine Name Input */}
                             <Input
                               id={`medicine-${index}`}
                               type="text"
-                              value={medicine}
+                              placeholder="Medicine Name"
+                              value={medicine.name}
                               onChange={(e) =>
-                                handleMedicineChange(index, e.target.value)
+                                handleMedicineChange(
+                                  index,
+                                  "name",
+                                  e.target.value
+                                )
                               }
-                              className="bg-black text-white flex-grow"
+                              className="text-black bg-white flex-grow"
                             />
+                            {/* Medicine Dosage Input */}
+                            <Input
+                              type="text"
+                              placeholder="Dosage"
+                              value={medicine.dosage}
+                              onChange={(e) =>
+                                handleMedicineChange(
+                                  index,
+                                  "dosage",
+                                  e.target.value
+                                )
+                              }
+                              className="text-black bg-white flex-grow ml-2"
+                            />
+                            {/* Remove Button */}
                             {index === medicinesData.length - 1 && (
                               <Button
                                 type="button"
@@ -381,7 +457,7 @@ export const RegistrationPage = () => {
                         </Button>
                       </div>
                       <div className="grid grid-cols-1 items-center gap-4">
-                        <Label htmlFor="comment" className="">
+                        <Label htmlFor="comment" className="text-black">
                           Comment
                         </Label>
                         <Textarea
@@ -393,7 +469,7 @@ export const RegistrationPage = () => {
                               e.target.value
                             )
                           }
-                          className="col-span-3 bg-black text-white"
+                          className="col-span-3 text-black bg-white"
                         />
                       </div>
                       <SheetFooter>
@@ -414,22 +490,28 @@ export const RegistrationPage = () => {
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="terms"
-                className=" border-white"
+                className=" border-black"
                 checked={formData.privacyConsent} // Bind checked state
                 onCheckedChange={(value) =>
                   handleInputChange("privacyConsent", value)
                 }
               />
-              <Label htmlFor="terms">Accept terms and conditions</Label>
+              <Label htmlFor="terms" className="text-black">
+                Agree terms and conditions
+              </Label>
             </div>
           </div>
           <div className="flex justify-center">
-            <Button
-              type="submit"
-              className="w-1/3 bg-green-500 hover:bg-green-700 text-white"
-            >
-              Register
-            </Button>
+            {isLoading ? (
+              <LoadingSpinner />
+            ) : (
+              <Button
+                type="submit"
+                className="w-1/3 bg-green-500 hover:bg-green-700 text-white mb-4"
+              >
+                Register
+              </Button>
+            )}
           </div>
         </form>
       </div>

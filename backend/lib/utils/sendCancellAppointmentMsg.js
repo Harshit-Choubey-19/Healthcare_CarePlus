@@ -25,7 +25,7 @@ export const sendCancellAppointmentMsg = async (user, hospitalName, date) => {
     let msgOptions = {
       from: process.env.TWILIO_FROM_NUMBER,
       to: user.phoneNumber,
-      body: `Dear ${NAME}, with Patient ID: [${user._id}], your appointment at ${hospitalName} on ${readableDate} at ${readableTime} has been cancelled. If not done by you please contact the hospital for further details. Stay healthy and take care! Team CarePlus`,
+      body: `Dear ${NAME}, with Patient ID: [${user._id}], your appointment at ${hospitalName} on ${readableDate} at ${readableTime} has been cancelled. If not done by you please contact the hospital for further details. Stay healthy and take care!     -Team CarePlus`,
     };
     await client.messages.create(msgOptions);
     return true;

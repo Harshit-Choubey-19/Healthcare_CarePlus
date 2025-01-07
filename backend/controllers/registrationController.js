@@ -28,7 +28,7 @@ export const register = async (req, res) => {
       identificationType,
       identificationNumber,
       privacyConsent,
-      prescriptions,
+      prescription,
     } = req.body;
 
     const patientId = req.user._id;
@@ -48,7 +48,8 @@ export const register = async (req, res) => {
       !emergencyContactNumber ||
       !allergies ||
       !identificationType ||
-      !identificationNumber
+      !identificationNumber ||
+      !prescription
     ) {
       return res.status(400).json({ error: "Please fill in all the fields" });
     }
@@ -76,7 +77,7 @@ export const register = async (req, res) => {
         identificationType,
         identificationNumber,
         privacyConsent,
-        prescriptions,
+        prescription,
         isRegistrationComplete: true,
       },
       { new: true }
@@ -99,7 +100,7 @@ export const register = async (req, res) => {
         identificationType,
         identificationNumber,
         privacyConsent,
-        prescriptions,
+        prescription,
         isRegistrationComplete: patient.isRegistrationComplete,
       },
     });

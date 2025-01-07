@@ -6,6 +6,21 @@ import { sendAppointmentMsg } from "../lib/utils/sendAppointmentMsg.js";
 import { sendCancellAppointmentMsg } from "../lib/utils/sendCancellAppointmentMsg.js";
 import { sendRescheduleAppointmentMsg } from "../lib/utils/sendRescheduleAppointmentMsg.js";
 
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Radius of the Earth in km
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) *
+      Math.cos(lat2 * (Math.PI / 180)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distance = R * c; // Distance in km
+  return distance;
+}
+
 export const hospitals = async (req, res) => {
   try {
     const { lat, lng } = req.query;
@@ -42,6 +57,17 @@ export const hospitals = async (req, res) => {
 
         const details = detailsResponse.data.result;
 
+        // Calculate distance from user location to hospital
+        const hospitalLat = hospital.geometry.location.lat;
+        const hospitalLng = hospital.geometry.location.lng;
+        const distance = calculateDistance(lat, lng, hospitalLat, hospitalLng);
+
+        // Format distance: if less than 1 km, show in metres
+        const formattedDistance =
+          distance < 1
+            ? `${(distance * 1000).toFixed(0)} m` // Convert to metres
+            : `${distance.toFixed(2)} km`; // Keep in km
+
         return {
           id: hospital.place_id,
           name: hospital.name,
@@ -54,6 +80,8 @@ export const hospitals = async (req, res) => {
             phone: details.formatted_phone_number || "N/A",
             website: details.website || "N/A",
           },
+          rating: details.rating || "N/A", // Include hospital rating
+          distance: formattedDistance, // Include distance in km
         };
       }
     );
@@ -372,6 +400,61 @@ export const rescheduleAppointment = async (req, res) => {
     }
   } catch (error) {
     console.error("Error rescheduling appointment:", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const successPage = async (req, res) => {
+  try {
+    const { hospitalId } = req.params;
+    const appointment = await Appointment.findOne({ hospitalId: hospitalId });
+
+    if (!appointment) {
+      return res.status(404).json({ error: "Appointment not found" });
+    }
+    res.json(appointment);
+  } catch (error) {
+    console.error("Error fetching appointment on successPage:", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getOneAppointment = async (req, res) => {
+  try {
+    const { hospitalId } = req.params;
+    const appointment = await Appointment.findOne({ hospitalId });
+    if (!appointment) {
+      return res.status(404).json({ error: "Appointment not found" });
+    }
+    return res.json({
+      _id: appointment._id,
+      hospitalId: appointment.hospitalId,
+      hospitalName: appointment.hospitalName,
+      hospitalAddress: appointment.hospitalAddress,
+      date: appointment.date,
+      status: appointment.status,
+    });
+  } catch (error) {
+    console.error("Error fetching one appointment details:", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getAllAppointment = async (req, res) => {
+  try {
+    const { hospitalId } = req.params;
+    const appointments = await Appointment.find({ hospitalId: hospitalId });
+    if (!appointments) {
+      return res.status(404).json({ error: "No appointments found" });
+    }
+    // Extract only the date from each appointment
+    const appointmentDates = appointments.map((appointment) => ({
+      date: appointment.date,
+      patientId: appointment.patientId,
+    }));
+    return res.json(appointmentDates);
+  } catch (error) {
+    console.error("Error in getAllAppointment:", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };

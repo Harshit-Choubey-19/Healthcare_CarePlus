@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { MdOutlineMail } from "react-icons/md";
 import { FaUser } from "react-icons/fa";
-import LoadingSpinner from "@/common/LoadingSpinner";
 import { Button } from "../../components/ui/button";
 import "react-phone-number-input/style.css";
 import PhoneInput from "react-phone-number-input";
@@ -9,31 +8,65 @@ import React from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { OtpPage } from "./OtpPage";
+import { useMutation, useQueryClient } from "react-query";
+import { toast } from "react-hot-toast";
+import LoadingSpinner from "./../../common/LoadingSpinner";
 
 export const SignupPage = () => {
+  const queryClient = useQueryClient();
+
   const [formData, setFormData] = useState({
-    name: "",
+    fullName: "",
     email: "",
     phoneNumber: "",
   });
   const [DefError, setDefError] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
 
+  const { mutate, isError, isPending, error } = useMutation({
+    mutationFn: async ({ fullName, email, phoneNumber }) => {
+      try {
+        const res = await fetch("/api/auth/signup", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ fullName, email, phoneNumber }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok && !data.message) {
+          throw new Error(data.error || "Something went wrong!");
+        }
+        console.log(data);
+        return data;
+      } catch (error) {
+        console.error("Error in mutation:", error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["authUser"] });
+      setShowDialog(true);
+    },
+    onError: (error) => {
+      setShowDialog(false);
+      toast.error(error.message);
+    },
+  });
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (!formData.name || !formData.email || !formData.phoneNumber) {
+    if (!formData.fullName || !formData.email || !formData.phoneNumber) {
       setDefError(true);
     }
 
     if (formData.phoneNumber.length < 10) {
       setDefError(true);
     }
-
-    setShowDialog(true);
-    // loginMutation(formData);
+    mutate(formData);
     console.log(formData);
   };
 
@@ -65,9 +98,9 @@ export const SignupPage = () => {
                 type="text"
                 className="grow text-black bg-white"
                 placeholder="Full Name"
-                name="name"
-                onChange={(e) => handleInputChange("name", e.target.value)}
-                value={formData.name}
+                name="fullName"
+                onChange={(e) => handleInputChange("fullName", e.target.value)}
+                value={formData.fullName}
                 required
               />
             </label>
@@ -97,23 +130,16 @@ export const SignupPage = () => {
                 required
               />
             </label>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button
-                  type="submit"
-                  className="shad-primary-btn w-full text-white bg-green-500 hover:bg-green-700"
-                >
-                  Register
-                </Button>
-              </DialogTrigger>
-              {showDialog && (
-                <DialogContent className="sm:max-w-[425px] bg-black">
-                  <OtpPage />
-                </DialogContent>
-              )}
-            </Dialog>
-
-            {/* {isError && <p className="text-red-500">{error.message}</p>} */}
+            {isPending ? (
+              <LoadingSpinner />
+            ) : (
+              <Button
+                type="submit"
+                className="shad-primary-btn w-full text-white bg-green-500 hover:bg-green-700"
+              >
+                Signup
+              </Button>
+            )}
           </form>
           <div className="text-14-regular mt-11 flex justify-between">
             <p className="justify-items-end text-dark-600 xl:text-left">

@@ -15,7 +15,7 @@ export const appointmentProtectRoute = async (req, res, next) => {
 
     const patient = await Patient.findById(decoded.userId);
 
-    const registrationDone = patient.isReistrationComplete;
+    const registrationDone = patient.isRegistrationComplete;
 
     if (!registrationDone) {
       return res

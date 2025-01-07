@@ -4,7 +4,7 @@ const prescriptionSchema = new mongoose.Schema({
   prescriptionDate: {
     type: Date,
   },
-  doctor: {
+  doctorName: {
     type: String,
   },
   medicines: [
@@ -22,7 +22,7 @@ const prescriptionSchema = new mongoose.Schema({
   },
 });
 
-const pateintSchema = new mongoose.Schema(
+const patientSchema = new mongoose.Schema(
   {
     _id: {
       type: String,
@@ -84,17 +84,17 @@ const pateintSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    isReistrationComplete: {
+    isRegistrationComplete: {
       type: Boolean,
       default: false,
     },
-    prescriptions: prescriptionSchema,
+    prescription: { type: prescriptionSchema, default: {} },
   },
   {
     timestamps: true,
   }
 );
 
-const Patient = mongoose.model("Patient", pateintSchema);
+const Patient = mongoose.model("Patient", patientSchema);
 
 export default Patient;

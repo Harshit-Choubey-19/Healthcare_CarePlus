@@ -15,6 +15,7 @@ export const ImageSlider = () => {
     "/assets/images/hospital1.jpg",
     "/assets/images/hospital2.avif",
     "/assets/images/hospital3.jpg",
+    "/assets/images/imag4.webp",
   ];
 
   const plugin = React.useRef(Autoplay({ delay: 3000 }));

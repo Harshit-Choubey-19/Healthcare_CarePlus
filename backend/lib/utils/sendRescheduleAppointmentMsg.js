@@ -29,7 +29,7 @@ export const sendRescheduleAppointmentMsg = async (
     let msgOptions = {
       from: process.env.TWILIO_FROM_NUMBER,
       to: user.phoneNumber,
-      body: `Dear ${NAME}, with Patient ID: [${user._id}], your appointment at ${hospitalName} has been rescheduled to ${readableDate} at ${readableTime}. Please arrive at the hospital 15 minutes before your scheduled time to complete all necessary formalities. Stay healthy and take care! Team CarePlus`,
+      body: `Dear ${NAME}, with Patient ID: [${user._id}], your appointment at ${hospitalName} has been rescheduled to ${readableDate} at ${readableTime}. Please arrive at the hospital 15 minutes before your scheduled time to complete all necessary formalities. Stay healthy and take care!     -Team CarePlus`,
     };
     await client.messages.create(msgOptions);
     return true;

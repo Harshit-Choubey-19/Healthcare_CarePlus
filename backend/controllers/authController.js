@@ -109,7 +109,7 @@ export const login = async (req, res) => {
         if (msgSent) {
           return res
             .status(200)
-            .json({ message: "An Otp sent to your  please verify!" });
+            .json({ message: "An Otp sent to your phone please verify!" });
         } else {
           return res.status(400).json({ error: "Could not send otp!" });
         }

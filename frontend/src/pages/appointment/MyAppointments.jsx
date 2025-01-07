@@ -1,6 +1,4 @@
 import { NavBar } from "@/components/NavBar";
-import { useNavigate } from "react-router-dom";
-import { useState } from "react";
 import {
   Table,
   TableHeader,
@@ -35,68 +33,81 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import DatePicker from "react-datepicker";
 import { Link } from "react-router-dom";
-
-const appointments = [
-  {
-    id: 1,
-    hospitalName: "Hospital A",
-    hospitalId: 1,
-    bookingDateTime: "2023-10-01 10:00 AM",
-  },
-  {
-    id: 2,
-    hospitalName: "Hospital B",
-    hospitalId: 2,
-    bookingDateTime: "2023-10-02 11:00 AM",
-  },
-  // Add more appointments as needed
-];
+import { useMutation, useQuery, useQueryClient } from "react-query";
+import LoadingSpinner from "@/common/LoadingSpinner";
+import { useEffect } from "react";
+import { formatDate } from "@/lib/utils/formatDate";
+import { formatTime } from "@/lib/utils/formatTime";
+import toast from "react-hot-toast";
 
 export const MyAppointments = () => {
-  const [selectedDate, setSelectedDate] = useState(null);
-  const [selectedTime, setSelectedTime] = useState("");
-  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const getAvailableTimes = () => {
-    const times = [];
-    for (let hour = 9; hour < 19; hour++) {
-      for (let minute = 0; minute < 60; minute += 15) {
-        if (hour >= 12 && hour <= 13) continue; // Skip lunch break
-        const time = `${hour}:${minute === 0 ? "00" : minute}`;
-        times.push(time);
+  const {
+    data: myAppointments,
+    isLoading,
+    refetch,
+  } = useQuery({
+    queryKey: ["myAppointments"],
+    queryFn: async () => {
+      try {
+        const res = await fetch("/api/profile/myAppointments");
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || "Something went wrong");
+        }
+        return data;
+      } catch (error) {
+        throw new Error(error);
       }
+    },
+  });
+
+  const {
+    mutate: deleleAppointment,
+    isPending,
+    isError,
+    error,
+  } = useMutation({
+    mutationFn: async (appointmentId) => {
+      try {
+        const res = await fetch(
+          `/api/hospitals/cancel-appointment/${appointmentId}`,
+          {
+            method: "POST",
+          }
+        );
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || "Something went wrong!");
+        }
+      } catch (error) {
+        console.log(error);
+        throw new Error(error.message);
+      }
+    },
+    onSuccess: () => {
+      toast.success("Appointment cancelled!");
+      queryClient.invalidateQueries({ queryKey: ["myAppointments"] });
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
+  useEffect(() => {
+    if (myAppointments) {
+      refetch();
     }
-    times.push("19:00"); // Add the last time slot
-    return times;
+  }, [myAppointments, refetch]);
+
+  const handleDelete = (appointmentId) => {
+    deleleAppointment(appointmentId);
   };
-
-  const availableTimes = getAvailableTimes();
-
-  const handleRescheduleAppointment = () => {};
 
   return (
     <div>
@@ -107,77 +118,99 @@ export const MyAppointments = () => {
             <TableHead className="w-[100px]">Serial No</TableHead>
             <TableHead>Hospital Name</TableHead>
             <TableHead>Date and Time of Booking</TableHead>
+            <TableHead>Status</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
-        <TableBody>
-          {appointments.map((appointment, index) => (
-            <TableRow key={appointment.id}>
-              <TableCell className="font-medium">{index + 1}</TableCell>
-              <TableCell>{appointment.hospitalName}</TableCell>
-              <TableCell>{appointment.bookingDateTime}</TableCell>
-              <TableCell className="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button className="bg-transparent w-0 hover:bg-transparent">
-                      {" "}
-                      <FaEllipsisV
-                        className="inline-block text-white hover:text-gray-800 cursor-pointer text-lg"
-                        title="Options"
-                      />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-56">
-                    <DropdownMenuGroup>
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onSelect={(event) => event.preventDefault()} // Prevent the dropdown from closing
-                      >
-                        <MdCancel />
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <span>Cancel Appointment</span>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent className="bg-black z-[1050]">
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>
-                                Are you absolutely sure?
-                              </AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This action cannot be undone. This will
-                                permanently cancel your appointment.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel className="bg-red-500 hover:bg-red-700 hover:text-white">
-                                Cancel
-                              </AlertDialogCancel>
-                              <AlertDialogAction className="bg-blue-500 hover:bg-blue-700 hover:text-white">
-                                Continue
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onSelect={(event) => event.preventDefault()}
-                      >
-                        <GrPowerReset />
-                        <Link
-                          to={`/rescheduleAppointment/${appointment?.hospitalId}`}
-                        >
-                          <span>Reschedule Appointment</span>
-                        </Link>
-                      </DropdownMenuItem>
-                    </DropdownMenuGroup>
-                    <DropdownMenuSeparator />
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
+        {isLoading ? (
+          <LoadingSpinner />
+        ) : (
+          <>
+            {!myAppointments || myAppointments.length === 0 ? (
+              <div className="text-center py-4 text-xl">
+                No appointments found
+              </div>
+            ) : (
+              <TableBody>
+                {myAppointments?.map((appointment, index) => (
+                  <TableRow key={appointment._id}>
+                    <TableCell className="font-medium">{index + 1}</TableCell>
+                    <TableCell>{appointment.hospitalName}</TableCell>
+                    <TableCell>
+                      {formatDate(appointment.date)}&nbsp;at&nbsp;
+                      {formatTime(appointment.date)}
+                    </TableCell>
+                    <TableCell>{appointment?.status}</TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button className="bg-transparent w-0 hover:bg-transparent">
+                            {" "}
+                            <FaEllipsisV
+                              className="inline-block text-white hover:text-gray-800 cursor-pointer text-lg"
+                              title="Options"
+                            />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-56">
+                          <DropdownMenuGroup>
+                            <DropdownMenuItem
+                              className="cursor-pointer"
+                              onSelect={(event) => event.preventDefault()} // Prevent the dropdown from closing
+                            >
+                              <MdCancel />
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <span>Cancel Appointment</span>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent className="bg-black z-[1050]">
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Are you absolutely sure?
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This action cannot be undone. This will
+                                      permanently cancel your appointment.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel className="bg-red-500 hover:bg-red-700 hover:text-white">
+                                      Cancel
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      className="bg-blue-500 hover:bg-blue-700 hover:text-white"
+                                      onClick={() =>
+                                        handleDelete(appointment._id)
+                                      }
+                                    >
+                                      {isPending ? "Loading.." : "Continue"}
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="cursor-pointer"
+                              onSelect={(event) => event.preventDefault()}
+                            >
+                              <GrPowerReset />
+                              <Link
+                                to={`/rescheduleAppointment/${appointment?.hospitalId}`}
+                              >
+                                <span>Reschedule Appointment</span>
+                              </Link>
+                            </DropdownMenuItem>
+                          </DropdownMenuGroup>
+                          <DropdownMenuSeparator />
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            )}
+          </>
+        )}
       </Table>
       <div className="mt-44">
         <Footer />
