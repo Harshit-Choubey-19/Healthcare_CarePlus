@@ -88,9 +88,10 @@ export const MyAppointments = () => {
         throw new Error(error.message);
       }
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Appointment cancelled!");
       queryClient.invalidateQueries({ queryKey: ["myAppointments"] });
+      await refetch();
     },
     onError: (error) => {
       toast.error(error.message);
@@ -193,7 +194,7 @@ export const MyAppointments = () => {
                             >
                               <GrPowerReset />
                               <Link
-                                to={`/rescheduleAppointment/${appointment?.hospitalId}`}
+                                to={`/rescheduleAppointment/${appointment?._id}`}
                               >
                                 <span>Reschedule Appointment</span>
                               </Link>
@@ -210,7 +211,7 @@ export const MyAppointments = () => {
           </>
         )}
       </Table>
-      <div className="mt-44">
+      <div className="mt-52">
         <Footer />
       </div>
     </div>

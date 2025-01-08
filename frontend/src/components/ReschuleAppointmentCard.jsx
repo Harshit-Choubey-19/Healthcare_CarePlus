@@ -19,7 +19,9 @@ export const ReschuleAppointmentCard = ({ appointment }) => {
     queryKey: ["allAppointments"],
     queryFn: async () => {
       try {
-        const res = await fetch(`/api/hospitals/allAppointments/${hospitalId}`);
+        const res = await fetch(
+          `/api/hospitals/allAppointments/${appointment.hospitalId}`
+        );
         const data = await res.json();
 
         if (!res.ok) {
@@ -177,7 +179,7 @@ export const ReschuleAppointmentCard = ({ appointment }) => {
         <p className="text-base mb-2 font-semibold">
           Booked on:&nbsp;
           <span className="text-gray-700 font-normal">
-            {formatDate(appointment?.date)} at {formatTime(appointment?.date)}
+            {formatDate(appointment.date)} at {formatTime(appointment.date)}
           </span>
         </p>
       </CardContent>

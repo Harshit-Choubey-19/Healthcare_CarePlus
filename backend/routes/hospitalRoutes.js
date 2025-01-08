@@ -32,13 +32,13 @@ router.post(
   rescheduleAppointment
 );
 router.get(
-  "/successPage/:hospitalId",
+  "/successPage/:appointmentId",
   protectRoute,
   appointmentProtectRoute,
   successPage
 );
 router.get(
-  "/appointmentDetail/:hospitalId",
+  "/appointmentDetail/:appointmentId",
   protectRoute,
   appointmentProtectRoute,
   getOneAppointment

@@ -127,10 +127,6 @@ export const bookAppointment = async (req, res) => {
       .format("dddd, MMMM Do YYYY");
     const readableTime = moment(dateWithTime).tz(TIMEZONE).format("hh:mm A");
 
-    // Debug Logs
-    // console.log("Appintment date:", readableDate);
-    // console.log("Appointment time:", readableTime);
-
     // Check if the appointment date is within the next 3 days and not less than the current date
     if (appointmentDateTime < today || appointmentDateTime > threeDaysLater) {
       return res.status(400).json({
@@ -216,9 +212,7 @@ export const bookAppointment = async (req, res) => {
       appointmentDateTime
     );
     if (appointmentMsgSent) {
-      return res.status(201).json({
-        message: "Appointment booked successfully",
-      });
+      return res.status(201).json(appointment);
     } else {
       return res.status(400).json({
         error: "Appointment booked but message not sent",
@@ -252,7 +246,19 @@ export const cancelAppointment = async (req, res) => {
 
     //delete the appointment and hospital record from database
     await Appointment.findByIdAndDelete(appointmentId);
-    await Hospital.findOneAndDelete({ googlePlaceId: appointment.hospitalId });
+    // Check if the hospital has more than one appointment
+    if (hospital.appointments.length > 1) {
+      // Remove only the appointment with the matching patientId
+      hospital.appointments = hospital.appointments.filter(
+        (appt) => appt.patientId.toString() !== patientId.toString()
+      );
+      await hospital.save();
+    } else {
+      // If only one appointment exists, delete the entire hospital record
+      await Hospital.findOneAndDelete({
+        googlePlaceId: appointment.hospitalId,
+      });
+    }
 
     const cancellMsgSent = await sendCancellAppointmentMsg(
       req.user,
@@ -406,8 +412,8 @@ export const rescheduleAppointment = async (req, res) => {
 
 export const successPage = async (req, res) => {
   try {
-    const { hospitalId } = req.params;
-    const appointment = await Appointment.findOne({ hospitalId: hospitalId });
+    const { appointmentId } = req.params;
+    const appointment = await Appointment.findOne({ _id: appointmentId });
 
     if (!appointment) {
       return res.status(404).json({ error: "Appointment not found" });
@@ -421,8 +427,8 @@ export const successPage = async (req, res) => {
 
 export const getOneAppointment = async (req, res) => {
   try {
-    const { hospitalId } = req.params;
-    const appointment = await Appointment.findOne({ hospitalId });
+    const { appointmentId } = req.params;
+    const appointment = await Appointment.findOne({ _id: appointmentId });
     if (!appointment) {
       return res.status(404).json({ error: "Appointment not found" });
     }

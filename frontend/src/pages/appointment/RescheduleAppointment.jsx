@@ -10,13 +10,13 @@ export const RescheduleAppointment = () => {
   useEffect(() => {
     document.title = "CarePlus | Reshedule your Appointment";
   });
-  const { hospitalId } = useParams();
+  const { appointmentId } = useParams();
   const { data: oneAppointment, isLoading } = useQuery({
     queryKey: ["oneAppointment"],
     queryFn: async () => {
       try {
         const res = await fetch(
-          `/api/hospitals/appointmentDetail/${hospitalId}`
+          `/api/hospitals/appointmentDetail/${appointmentId}`
         );
         const data = await res.json();
 

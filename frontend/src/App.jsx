@@ -125,7 +125,7 @@ const App = () => {
           }
         />
         <Route
-          path="/rescheduleAppointment/:hospitalId"
+          path="/rescheduleAppointment/:appointmentId"
           element={
             authUser && check && isRegistered ? (
               <RescheduleAppointment />
