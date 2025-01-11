@@ -80,7 +80,6 @@ export const AppointmentCard = () => {
       }
     },
     onSuccess: (data) => {
-      toast.success("Appointment Booked successfully!");
       // Redirect to success page with appointment details and hospitalId
       navigate("/success-page", { state: { appointmentId: data._id } });
     },
